@@ -817,8 +817,8 @@ def integer_array_indices(
     shape, min_dims=1, max_dims=3, min_side=1, max_side=3, dtype="int"
 ):
     # type: (Tuple[int, ...], int, int, int, int, np.dtype) -> st.SearchStrategy[Tuple[np.ndarray, ...]]
-    """Return a search strategy for generating integer-array indices for an
-    array of the specified shape.
+    """Return a search strategy for generating tuples of integer-arrays that index into an
+    array of the specified shape, using advanced indexing.
 
     Examples from this strategy shrink towards the index
     `len(shape) * (np.array([0]), )`.
@@ -829,8 +829,9 @@ def integer_array_indices(
     * ``max_dims`` the maximum dimensionality permitted for the index-arrays.
     * ``min_side`` the smallest side permitted for the index-arrays.
     * ``max_side`` the largest side permitted for the index-arrays.
-    * ``dtype`` the integer data of the generated index-arrays"""
-
+    * ``dtype`` the integer data type of the generated index-arrays.
+       Negative integer indices can be generated if a signed integer type is
+       specified."""
     check_type((tuple, list), shape, "shape")
     if not shape or any(not isinstance(x, integer_types) or x < 1 for x in shape):
         raise InvalidArgument(
