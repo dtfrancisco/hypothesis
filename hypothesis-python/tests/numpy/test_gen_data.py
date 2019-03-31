@@ -654,7 +654,6 @@ def test_singleton_out_of_bounds(data):
     assert smallest == (min_side,) * min_dim
 
 
-@settings(max_examples=1000)
 @given(
     shape=nps.array_shapes(min_dims=1, min_side=1),
     min_dims=st.integers(0, 3),
@@ -679,7 +678,58 @@ def test_advanced_integer_index(shape, min_dims, min_side, dtype, data):
     out = x[index]  # raises if the index is invalid
     assert all(min_side <= s <= max_side for s in out.shape)
     assert min_dims <= out.ndim <= max_dims
-    assert not np.shares_memory(
-        x, out
-    ), "An advanced index should create a copy upon indexing"
+    assert not np.shares_memory(x, out)  # advanced indexing should not return a view
     assert all(dtype == x.dtype for x in index)
+
+
+@settings(deadline=None)
+@given(
+    shape=nps.array_shapes(min_dims=1, max_dims=3, min_side=1, max_side=4),
+    data=st.data(),
+)
+def test_minimize_advanced_integer_index(shape, data):
+    """Ensure that generated index-arrays can find any item within an array"""
+    x = np.arange(np.product(shape)).reshape(shape)
+    target_index = data.draw(
+        st.integers(0, x.size - 1).map(lambda ind: np.unravel_index(ind, shape)),
+        label="target_index",
+    )
+    target_item = x[target_index]
+    smallest = minimal(
+        nps.integer_array_indices(
+            shape, min_dims=1, max_dims=1, min_side=1, max_side=1, dtype="uint8"
+        ),
+        lambda index: target_item in x[index].flatten(),
+    )
+    desired = tuple(np.full((1,), fill_value=i, dtype="uint8") for i in target_index)
+    assert len(smallest) == len(desired)
+    for s, d in zip(smallest, desired):
+        np.testing.assert_array_equal(s, d)
+
+
+@settings(deadline=None)
+@given(
+    shape=nps.array_shapes(min_dims=1, max_dims=1, min_side=1, max_side=4),
+    data=st.data(),
+)
+def test_minimize_advanced_negative_integer_index(shape, data):
+    """Ensure that generated index-arrays can find any item within an array using negative indices"""
+    x = np.arange(np.product(shape)).reshape(shape)
+    target_index = data.draw(
+        st.integers(0, x.size - 1).map(lambda ind: np.unravel_index(ind, shape)),
+        label="target_index",
+    )
+    target_item = x[target_index]
+    smallest = minimal(
+        nps.integer_array_indices(
+            shape, min_dims=1, max_dims=1, min_side=1, max_side=1, dtype="int8"
+        ),
+        lambda index: target_item in x[index].flatten() and all(i < 0 for i in index),
+    )
+    desired = tuple(
+        np.full((1,), fill_value=i - s, dtype="int8")
+        for s, i in zip(shape, target_index)
+    )
+    assert len(smallest) == len(desired)
+    for s, d in zip(smallest, desired):
+        np.testing.assert_array_equal(s, d)
