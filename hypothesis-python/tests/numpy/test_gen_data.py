@@ -652,3 +652,34 @@ def test_singleton_out_of_bounds(data):
         )
     )
     assert smallest == (min_side,) * min_dim
+
+
+@settings(max_examples=1000)
+@given(
+    shape=nps.array_shapes(min_dims=1, min_side=1),
+    min_dims=st.integers(0, 3),
+    min_side=st.integers(0, 3),
+    dtype=st.one_of(nps.integer_dtypes(), nps.unsigned_integer_dtypes()),
+    data=st.data(),
+)
+def test_advanced_integer_index(shape, min_dims, min_side, dtype, data):
+    max_side = data.draw(st.integers(min_side, min_side + 2), label="max_side")
+    max_dims = data.draw(st.integers(min_dims, min_dims + 2), label="max_dims")
+    index = data.draw(
+        nps.integer_array_indices(
+            shape,
+            min_dims=min_dims,
+            max_dims=max_dims,
+            min_side=min_side,
+            max_side=max_side,
+            dtype=dtype,
+        )
+    )
+    x = np.zeros(shape) if shape else np.array(0.0)
+    out = x[index]  # raises if the index is invalid
+    assert all(min_side <= s <= max_side for s in out.shape)
+    assert min_dims <= out.ndim <= max_dims
+    assert not np.shares_memory(
+        x, out
+    ), "An advanced index should create a copy upon indexing"
+    assert all(dtype == x.dtype for x in index)

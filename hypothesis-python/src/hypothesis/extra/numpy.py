@@ -813,11 +813,11 @@ def broadcastable_shapes(shape, min_dims=0, max_dims=3, min_side=1, max_side=5):
 
 
 @st.defines_strategy
-def advanced_integer_index(
-    shape, min_dims=1, max_dims=3, min_side=1, max_side=3, dtype=np.int32
+def integer_array_indices(
+    shape, min_dims=1, max_dims=3, min_side=1, max_side=3, dtype="int"
 ):
     # type: (Tuple[int, ...], int, int, int, int, np.dtype) -> st.SearchStrategy[Tuple[np.ndarray, ...]]
-    """Return a search strategy for generating an advanced integer-index for an
+    """Return a search strategy for generating integer-array indices for an
     array of the specified shape.
 
     Examples from this strategy shrink towards the index
@@ -832,6 +832,11 @@ def advanced_integer_index(
     * ``dtype`` the integer data of the generated index-arrays"""
 
     check_type((tuple, list), shape, "shape")
+    if not shape or any(not isinstance(x, integer_types) or x < 1 for x in shape):
+        raise InvalidArgument(
+            "shape must be a non-empty tuple of integers greater than 0, got %r"
+            % (shape,)
+        )
 
     check_type(integer_types, min_side, "min_side")
     check_type(integer_types, max_side, "max_side")
