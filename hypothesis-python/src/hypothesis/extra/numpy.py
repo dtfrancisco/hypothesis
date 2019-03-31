@@ -810,3 +810,55 @@ def broadcastable_shapes(shape, min_dims=0, max_dims=3, min_side=1, max_side=5):
         min_side=min_side,
         max_side=max_side,
     )
+
+
+@st.defines_strategy
+def advanced_integer_index(
+    shape, min_dims=1, max_dims=3, min_side=1, max_side=3, dtype=np.int32
+):
+    # type: (Tuple[int, ...], int, int, int, int, np.dtype) -> st.SearchStrategy[Tuple[np.ndarray, ...]]
+    """Return a search strategy for generating an advanced integer-index for an
+    array of the specified shape.
+
+    Examples from this strategy shrink towards the index
+    `len(shape) * (np.array([0]), )`.
+
+    * ``shape`` a tuple of integers. The shape of the array whose indices are
+      being generated.
+    * ``min_dims`` the minimum dimensionality permitted for the index-arrays.
+    * ``max_dims`` the maximum dimensionality permitted for the index-arrays.
+    * ``min_side`` the smallest side permitted for the index-arrays.
+    * ``max_side`` the largest side permitted for the index-arrays.
+    * ``dtype`` the integer data of the generated index-arrays"""
+
+    check_type((tuple, list), shape, "shape")
+
+    check_type(integer_types, min_side, "min_side")
+    check_type(integer_types, max_side, "max_side")
+    order_check("side", 0, min_side, max_side)
+
+    check_type(integer_types, min_dims, "min_dims")
+    check_type(integer_types, max_dims, "max_dims")
+    order_check("dims", 0, min_dims, max_dims)
+    if 32 < max_dims:
+        raise InvalidArgument("max_dims cannot exceed 32")
+
+    index_shape = array_shapes(
+        min_dims=min_dims, max_dims=max_dims, min_side=min_side, max_side=max_side
+    )
+
+    if not np.issubdtype(dtype, np.integer):
+        raise InvalidArgument("dtype must be an integer data type. Got %r" % dtype)
+
+    def bnds(size):
+        lower = -size if np.issubdtype(dtype, np.signedinteger) else 0
+        return lower, size - 1
+
+    return index_shape.flatmap(
+        lambda x: st.tuples(
+            *(
+                arrays(dtype=dtype, shape=x, elements=st.integers(*bnds(size)))
+                for size in shape
+            )
+        )
+    )
