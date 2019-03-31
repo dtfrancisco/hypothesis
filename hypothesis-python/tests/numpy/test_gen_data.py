@@ -684,11 +684,39 @@ def test_advanced_integer_index(shape, min_dims, min_side, dtype, data):
 
 @settings(deadline=None)
 @given(
+    shape=nps.array_shapes(min_dims=1, min_side=1),
+    min_dims=st.integers(0, 3),
+    min_side=st.integers(0, 3),
+    data=st.data(),
+)
+def test_advanced_integer_index_minimizes_as_documented(
+    shape, min_dims, min_side, data
+):
+    max_side = data.draw(st.integers(min_side, min_side + 2), label="max_side")
+    max_dims = data.draw(st.integers(min_dims, min_dims + 2), label="max_dims")
+    smallest = minimal(
+        nps.integer_array_indices(
+            shape,
+            min_dims=min_dims,
+            max_dims=max_dims,
+            min_side=min_side,
+            max_side=max_side,
+            dtype="int8",
+        )
+    )
+    desired = len(shape) * (np.zeros(min_dims * [min_side]),)
+    assert len(smallest) == len(desired)
+    for s, d in zip(smallest, desired):
+        np.testing.assert_array_equal(s, d)
+
+
+@settings(deadline=None)
+@given(
     shape=nps.array_shapes(min_dims=1, max_dims=3, min_side=1, max_side=4),
     data=st.data(),
 )
-def test_minimize_advanced_integer_index(shape, data):
-    """Ensure that generated index-arrays can find any item within an array"""
+def test_advanced_integer_index_minimizes_to_target(shape, data):
+    """Ensures that generated index-arrays can find any item within an array"""
     x = np.arange(np.product(shape)).reshape(shape)
     target_index = data.draw(
         st.integers(0, x.size - 1).map(lambda ind: np.unravel_index(ind, shape)),
@@ -712,8 +740,8 @@ def test_minimize_advanced_integer_index(shape, data):
     shape=nps.array_shapes(min_dims=1, max_dims=1, min_side=1, max_side=4),
     data=st.data(),
 )
-def test_minimize_advanced_negative_integer_index(shape, data):
-    """Ensure that generated index-arrays can find any item within an array using negative indices"""
+def test_advanced_integer_index_minimizes_to_negative_target(shape, data):
+    """Ensures that generated index-arrays can find any item within an array using negative indices"""
     x = np.arange(np.product(shape)).reshape(shape)
     target_index = data.draw(
         st.integers(0, x.size - 1).map(lambda ind: np.unravel_index(ind, shape)),

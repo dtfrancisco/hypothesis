@@ -820,8 +820,8 @@ def integer_array_indices(
     """Return a search strategy for generating tuples of integer-arrays that index into an
     array of the specified shape, using advanced indexing.
 
-    Examples from this strategy shrink towards the index
-    `len(shape) * (np.array([0]), )`.
+    Examples from this strategy shrink towards the index:
+    `len(shape) * (np.zeros(min_dims * [min_side], dtype), )`
 
     * ``shape`` a tuple of integers. The shape of the array whose indices are
       being generated.
